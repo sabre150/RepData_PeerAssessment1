@@ -78,3 +78,35 @@ dataImputed <- rbind(dataComp, dataImputed)
 # Re-order the data frame so it's back in the original order using plyr arrange
 dataImputed <- arrange(dataImputed, dateTime)
 
+
+# Add 2 level factor columen to imputed data set designating whether the day is 
+# a weekday or a weekend  
+
+# Function takes a POSIXct vector and retruns a charater vecttor of the same lenght 
+# designating the date as a "weekend" or a "weekday"
+getDayType <- function(x){
+    xOut <- character(length(x))
+    for (i in 1:length(x)) {
+        if(grepl("^S", weekdays(x[i]))) xOut[i] <- "weekend" else xOut[i] <- "weekday"
+    }
+    xOut
+}
+
+# Add dayType columne to the imputed data set
+dayType <- getDayType(dataImputed$dateTime)
+dataImputed <- cbind(dataImputed, dayType)
+
+# Split data frame on interval and dayType, take the mean of the intervals
+# and unsplit the data frame usning dplyr.library(plyr)
+meansByDayType <- ddply(dataImputed, c("dayType", "interval"), summarise,
+                   meanSteps = mean(steps))
+
+# Create panel plot of average total steps per time period by day type
+library(ggplot2)
+qplot(interval, meanSteps, data = meansByDayType, geom = "line", facets = dayType~. ) +
+    geom_line(color = "royalblue")  + 
+    labs(x = "Interval", y ="Number of Steps")
+
+ggplot(meansByDayType, aes(x = interval, y = meanSteps, facets = dayType~. )) +
+    geom_line(color = "royalblue")                   
+

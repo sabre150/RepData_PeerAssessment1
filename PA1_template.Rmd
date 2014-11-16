@@ -253,9 +253,59 @@ Median total steps per day.
 - With NA values:       `r as.integer(dailyMedian)`  
 - With imputed values:  `r as.integer(impMedian)` 
 
-  
+***  
 
-  
+## Are there differences in activity patterns between weekdays and weekends?  
+#### Adding a new column to the imputed data set.  
+We will add a column, dayType designating whether the the day is a weekday or 
+a weekend.  
+First create a function that returns whether a date is a weekend or a weekday.  
+The function will take a POSIXct vector, use the Weekdays function on each element 
+of the vector.  If the resulting day starts with "S" assign it the valule "weekend" 
+else assign it the value "weekday."
+
+```{r getDayTypeFunction}
+
+# Function takes a POSIXct vector and retruns a charater vecttor of the same lenght 
+# designating the date as a "weekend" or a "weekday"
+getDayType <- function(x){
+    xOut <- character(length(x))
+    for (i in 1:length(x)) {
+        if(grepl("^S", weekdays(x[i]))) xOut[i] <- "weekend" else xOut[i] <- "weekday"
+    }
+    xOut
+}
+
+```  
+Next, add the dayType column to the dataImputed data frame and make it a factor.  
+```{r addDayType}
+# Add dayType columne to the imputed data set.
+# The cbind function conveniently converts dayType to a factor for us.
+dayType <- getDayType(dataImputed$dateTime)
+dataImputed <- cbind(dataImputed, dayType)
+
+```  
+Now create a data frame that splits the dataImputed data frame on interval and 
+dayType.  Then take the mean of each daypart and unsplit the the data.  we will 
+use the plyr package to do this.  
+
+```{r}
+
+# Split data frame on interval and dayType, take the mean of the intervals
+# and unsplit the data frame usning dplyr.library(plyr)
+meansByDayType <- ddply(dataImputed, c("dayType", "interval"), summarise,
+                   meanSteps = mean(steps))
+
+``` 
+Finally create a panel plot of average total steps per interval by day type.
+
+```{r plotDayType, fig.width = 15, fig.height = 15}
+# Create panel plot of average total steps per time period by day type
+library(ggplot2)
+qplot(interval, meanSteps, data = meansByDayType, geom = "line", facets = dayType~. ) +
+    geom_line(color = "royalblue")  + 
+    labs(x = "Interval", y ="Number of Steps")
+```
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+
