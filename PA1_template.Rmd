@@ -8,6 +8,42 @@ output:
 
 ## Loading and preprocessing the data
 
+#### Data
+- Data was downloaded from the following github repo  
+[https://github.com/rdpeng/RepData_PeerAssessment1]
+(https://github.com/rdpeng/RepData_PeerAssessment1)
+ forked on 11/15/2014.  
+ 
+- The dataset is contained in a .csv file named activity.csv
+ 
+#### Code Book  
+ - **Raw Data**
+    - **steps;**    The number of steps taken in a 5 minute interval.  
+    - **date:**     The date the measurement was taken.  Format: YYYY-MM-DD.  
+    - **interval:** 5 minute interval identifier.  This is an integer that 
+    represents the time of the beginning of the 5 minute interval.  Format HHMM 
+    where HH represents the hour of the day (0-24), MM represents the minutes 
+    (0-55).  Leading zeros are dropped.
+
+ - **Processed Data**  
+ I will add a date/time column to the raw data.  The processed data
+ will have the 3 variables listed above plus the following: 
+    - **dateTime;**  A date/time value calculated from the date 
+    and interval variables.  Format: POSIXct. 
+    
+#### R Code  
+
+```{r reaData}
+# Load raw data.
+dataFile <- "./Data/activity.csv"
+rawData <- read.csv(dataFile)
+
+## Preprocess raw data into a data frame called steps by adding a POSIXct dateTime 
+steps <- within (rawData, {
+    dateTime <- as.POSIXct(sprintf("%s %0.4d", date, interval), format = "%Y-%m-%d %H%M")
+})
+
+```
 
 
 ## What is mean total number of steps taken per day?
