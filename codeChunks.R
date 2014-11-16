@@ -49,5 +49,32 @@ ggplot(intervalMean, aes(x = interval, y = meanSteps)) +
 maxInterval <- intervalMean[intervalMean$meanSteps == max(intervalMean$meanSteps),]
 maxInterval
 
+# Find the number of NA values for the steps variable
+numNA <- sum(is.na(procData$steps))
+numNA
 
+# Impute missing values by breaking the date frame procData into 2 data frames,
+# One containing complete observations (dataComp)and on containing NA
+# values for steps (dataNA).  We will then merg the dataNA with intervalMean
+# and then row bind the merged data frame to dataComp.
+library(stats)
+
+# Split data frame
+dataComp <- procData[complete.cases(procData),]
+dataNA <- procData[!complete.cases(procData),]
+
+#  Megere data frames
+dataImputed <- merge(dataNA, intervalMean)
+
+# Round the the mean values so they are integers and assign the value to steps 
+dataImputed$steps <- round(dataImputed$meanSteps)
+
+# Drop the meanSteps column
+dataImputed <- dataImputed[, -5]
+
+# Put the data frames back together with rbind
+dataImputed <- rbind(dataComp, dataImputed)
+
+# Re-order the data frame so it's back in the original order using plyr arrange
+dataImputed <- arrange(dataImputed, dateTime)
 

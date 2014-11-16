@@ -14,7 +14,7 @@ output:
 (https://github.com/rdpeng/RepData_PeerAssessment1)
  forked on 11/15/2014.  
  
-- The dataset is contained in a .csv file named activity.csv
+- The data set is contained in a .csv file named activity.csv
  
 #### Code Book  
  - **Raw Data**
@@ -50,9 +50,9 @@ procData <- within (rawData, {
 ## What is mean total number of steps taken per day?
 #### Historgram of total steps taken per day  
 In order to get a histogram of total steps take per day we need a weighted histogram.  
-If we take a normal historgram of the date variable we would get count of the number 
+If we take a normal histogram of the date variable we would get count of the number 
 of observations per day (i.e. 288).  However if we weight (multiply) each observation 
-by the numper of steps taken in that observation we will get a historgram of the 
+by the number of steps taken in that observation we will get a histogram of the 
 total steps taken per day.  
 
 ```{r histogram1, fig.width = 15}
@@ -88,15 +88,20 @@ For the mean value of total steps per day we will take the mean of the totalStep
 column of the dailyData data frame.  
 ```{r dailyTotalMean}
 # Mean of daily total steps
-mean(dailyData$totalSteps, na.rm = TRUE)
+dailyMean <- mean(dailyData$totalSteps, na.rm = TRUE)
+dailyMean
 
 ```
 For the median value of total steps per day we will take the median of the 
 totalSteps column of the dailyData data frame.  
 ```{r dailyTotalMedian}
 # Median of daily total steps
-median(dailyData$totalSteps, na.rm = TRUE)
+dailyMedian <- median(dailyData$totalSteps, na.rm = TRUE)
+dailyMedian 
 ```
+
+The mean of total steps per day is `r dailyMean`.  
+The median of total steps per day is `r dailyMedian`.
   
   
 ***
@@ -123,7 +128,7 @@ ggplot(intervalMean, aes(x = interval, y = meanSteps)) +
     labs(title = "Average Number of Steps per Time Interval", x = "Interval", y = "Number of Steps")
 ```
   
-Now to find the 5 minute interval which, when averaged across all days, conatins 
+Now to find the 5 minute interval which, when averaged across all days, contains 
 the maximum number of steps.  We ill use the max function in R to do this.
 ```{r maxAvgStepsIterval}
 # Find interval with the maximum average number of steps
@@ -136,8 +141,121 @@ This means that, on average, this person takes the most steps during interval
 ***  
   
   
-## Imputing missing values
+## Imputing missing values  
 
+#### Calculating the number of missing values  
+The is.na function will return 1 (TRUE) if a value is NA and 0 (FALSE) if a value 
+is not NA.  Consequently, we can sum up the values of the is.na function to get the 
+total number of NA values.
+```{r countNA}
+# Find the number of NA values for the steps variable
+numNA <- sum(is.na(procData$steps))
+numNA
+```
+The number of NA values in the steps column is `r numNA`  
+  
+  
+  
+#### Strategy for imputing the missing values  
+To impute the missing values we are going to use the average value taken over 
+all days for the same interval.  These values were calculated above and are 
+contained in the intervalMean data frame. 
+  
+#### Creating the new dataset
+We are going to create the new data set by:  
+- splitting the processed data (procData) into two data frames: one containing 
+complete observation and on containing NA values in the steps column.  
+- We will then merge the data set containing NA values with the data set of 
+average steps per interval.
+- Round the meanSteps value in the merged data frame and assign the results to 
+the steps column, over writing the NA values.  
+- Drop the mean steps column.
+- Row bind the resulting data frame back onto the complete observations data frame.  
+- Re-order the resulting data frame back into it's original order.
+```{r imputeValues}
+# Impute missing values by breaking the date frame procData into 2 data frames,
+# One containing complete observations (dataComp)and on containing NA
+# values for steps (dataNA).  We will then merg the dataNA with intervalMean
+# and then row bind the merged data frame to dataComp.
+library(stats)
+
+# Split data frame
+dataComp <- procData[complete.cases(procData),]
+dataNA <- procData[!complete.cases(procData),]
+
+#  Megere data frames
+dataImputed <- merge(dataNA, intervalMean)
+
+# Round the the mean values so they are integers and assign the value to steps 
+dataImputed$steps <- round(dataImputed$meanSteps)
+
+# Drop the meanSteps column
+dataImputed <- dataImputed[, -5]
+
+# Put the data frames back together with rbind
+dataImputed <- rbind(dataComp, dataImputed)
+
+# Re-order the data frame so it's back in the original order using plyr arrange
+dataImputed <- arrange(dataImputed, dateTime)
+```  
+#### Historgram of total steps taken per day with imputed values  
+We will plot the imputed data exaclty as we did with the processed data above, 
+substituting the imputed data set.  
+
+```{r histogram2, fig.width = 15}
+# Histogram of date weighted by steps.  This gives us a historam of total steps/day.
+require(ggplot2)
+qplot(date, data = dataImputed, weight = steps) +
+    labs(title = "Total Steps per Day", x = "Date", y = "Total Steps") +
+    geom_bar(fill = "royalblue") +
+    
+    # De-clutter the x axis by only showing every 7th date   
+    scale_x_discrete(breaks = c("2012-10-01","2012-10-08","2012-10-15","2012-10-22","2012-10-29",
+                                "2012-11-05","2012-11-12","2012-11-19","2012-11-26"))
+```  
+#### Mean and median of total steps take per day with imputed data.  
+Again we will use  the same precess as we did with the processed data, substituting 
+the imputed data set.  
+  
+
+```{r dailyStatsImputed}
+# Calculate total, mean and median number of steps per day.
+# Note: median = 0 for most days becasue steps = 0 for > 1/2 of intervals.
+
+library(plyr)
+dailyDataImputed <- ddply(dataImputed, "date", summarise,
+                    totalSteps = sum(steps, na.rm = TRUE),
+                    meanSteps = mean(steps, na.rm = TRUE),
+                    medianSteps = median(steps, na.rm = TRUE))
+
+```
+For the mean value of total steps per day we will take the mean of the totalSteps 
+column of the dailyDataImputed data frame.  
+```{r dailyTotalMeanImputed}
+# Mean of daily total steps
+impMean <- mean(dailyDataImputed$totalSteps)
+impMean
+
+```
+For the median value of total steps per day we will take the median of the 
+totalSteps column of the dailyDataImputed data frame.  
+```{r dailyTotalMedianImputed}
+# Median of daily total steps
+impMedian <- median(dailyDataImputed$totalSteps)
+impMedian 
+```  
+#### Comparing values with and without imputed values.  
+Mean total steps per day.  
+- With NA values:       `r as.integer(dailyMean)`  
+- With imputed values:  `r as.integer(impMean)`  
+  
+Median total steps per day.  
+- With NA values:       `r as.integer(dailyMedian)`  
+- With imputed values:  `r as.integer(impMedian)` 
+
+  
+
+  
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
